@@ -1,6 +1,7 @@
 package com.example.demo.controller;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -34,6 +35,17 @@ public class HelloController {
         return response;
     }
 
+    @GetMapping("/api/version")
+    public Map<String, String> version() {
+        Map<String, String> response = new HashMap<>();
+        response.put("application", applicationName);
+        response.put("version", "1.0.0");
+        return response;
+    }
+    
+    
+    
+    
     @GetMapping("/health")
     public Map<String, String> health() {
         Map<String, String> response = new LinkedHashMap<>();
