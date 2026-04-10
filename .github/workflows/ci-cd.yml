@@ -1,0 +1,88 @@
+name: CI-CD Spring Boot 4 Docker to AWS Elastic Beanstalk
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  build-test-package:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: corretto
+          java-version: '21'
+          cache: maven
+
+      - name: Build and test with Maven
+        run: mvn clean verify
+
+      - name: Build Docker image locally for validation
+        run: docker build -t springboot-aws-docker-demo:${{ github.sha }} .
+
+      - name: Build jar for deployment bundle
+        run: mvn clean package -DskipTests
+
+      - name: Create deployment zip
+        run: zip -r deploy.zip Dockerfile .ebextensions target
+
+      - name: Upload deployment package
+        uses: actions/upload-artifact@v4
+        with:
+          name: deploy-package
+          path: deploy.zip
+
+  deploy:
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    needs: build-test-package
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: corretto
+          java-version: '21'
+          cache: maven
+
+      - name: Build jar for deployment bundle
+        run: mvn clean package -DskipTests
+
+      - name: Create deployment zip
+        run: zip -r deploy.zip Dockerfile .ebextensions target
+
+      - name: Configure AWS credentials with OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::123456789012:role/GitHubActionsElasticBeanstalkRole
+          aws-region: eu-central-1
+
+      - name: Generate deployment version label
+        id: version
+        shell: bash
+        run: echo "label=demo-${GITHUB_RUN_NUMBER}-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy to Elastic Beanstalk
+        uses: aws-actions/aws-elasticbeanstalk-deploy@v1
+        with:
+          application_name: springboot-aws-docker-demo
+          environment_name: springboot-aws-docker-demo-env
+          version_label: ${{ steps.version.outputs.label }}
+          region: eu-central-1
+          deployment_package: deploy.zip
