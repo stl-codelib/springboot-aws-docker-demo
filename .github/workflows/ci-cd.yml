@@ -86,3 +86,5 @@ jobs:
           version-label: ${{ steps.version.outputs.label }}
           aws-region: eu-central-1
           deployment-package-path: deploy.zip
+		  create-application-if-not-exists: true
+		  create-environment-if-not-exists: true
