@@ -81,8 +81,8 @@ jobs:
       - name: Deploy to Elastic Beanstalk
         uses: aws-actions/aws-elasticbeanstalk-deploy@main
         with:
-          application_name: springboot-aws-docker-demo
-          environment_name: springboot-aws-docker-demo-env
-          version_label: ${{ steps.version.outputs.label }}
+          application-name: springboot-aws-docker-demo
+          environment-name: springboot-aws-docker-demo-env
+          version-label: ${{ steps.version.outputs.label }}
           region: eu-central-1
-          deployment_package: deploy.zip
+          deployment-package: deploy.zip
