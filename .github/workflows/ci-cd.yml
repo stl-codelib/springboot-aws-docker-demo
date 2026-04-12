@@ -79,7 +79,7 @@ jobs:
         run: echo "label=demo-${GITHUB_RUN_NUMBER}-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
 
       - name: Deploy to Elastic Beanstalk
-        uses: aws-actions/aws-elasticbeanstalk-deploy@v1
+        uses: aws-actions/aws-elasticbeanstalk-deploy@main
         with:
           application_name: springboot-aws-docker-demo
           environment_name: springboot-aws-docker-demo-env
