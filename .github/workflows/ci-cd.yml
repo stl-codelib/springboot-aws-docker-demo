@@ -1,4 +1,4 @@
-nname: CI-CD Spring Boot 4 Docker to AWS Elastic Beanstalk
+name: CI-CD Spring Boot 4 Docker to AWS Elastic Beanstalk
 
 on:
   workflow_dispatch:
