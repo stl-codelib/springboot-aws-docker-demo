@@ -1,4 +1,4 @@
-name: CI-CD Spring Boot 4 Docker to AWS Elastic Beanstalk
+nname: CI-CD Spring Boot 4 Docker to AWS Elastic Beanstalk
 
 on:
   workflow_dispatch:
@@ -78,6 +78,10 @@ jobs:
           deployment-package-path: deploy.zip
           create-application-if-not-exists: true
           create-environment-if-not-exists: true
+
+          # Für neue Environments erforderlich:
+          platform-arn: arn:aws:elasticbeanstalk:eu-central-1::platform/Docker running on 64bit Amazon Linux 2023
+
           option-settings: |
             [
               {
@@ -90,4 +94,4 @@ jobs:
                 "OptionName": "ServiceRole",
                 "Value": "aws-elasticbeanstalk-service-role"
               }
-            ]
+            ]	
