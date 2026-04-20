@@ -1,6 +1,7 @@
 name: CI-CD Spring Boot 4 Docker to AWS Elastic Beanstalk
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
@@ -68,7 +69,7 @@ jobs:
           aws-region: eu-central-1
 
       - name: Deploy to Elastic Beanstalk
-        uses: aws-actions/aws-elasticbeanstalk-deploy@main
+        uses: aws-actions/aws-elasticbeanstalk-deploy@v1.0.0
         with:
           application-name: springboot-aws-docker-demo
           environment-name: springboot-aws-docker-demo-env
@@ -77,3 +78,16 @@ jobs:
           deployment-package-path: deploy.zip
           create-application-if-not-exists: true
           create-environment-if-not-exists: true
+          option-settings: |
+            [
+              {
+                "Namespace": "aws:autoscaling:launchconfiguration",
+                "OptionName": "IamInstanceProfile",
+                "Value": "aws-elasticbeanstalk-ec2-role"
+              },
+              {
+                "Namespace": "aws:elasticbeanstalk:environment",
+                "OptionName": "ServiceRole",
+                "Value": "aws-elasticbeanstalk-service-role"
+              }
+            ]
