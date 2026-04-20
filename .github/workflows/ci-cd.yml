@@ -1,41 +1,98 @@
-deploy:
-  if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
-  needs: build-test-package
-  runs-on: ubuntu-latest
+name: CI-CD Spring Boot 4 Docker to AWS Elastic Beanstalk
 
-  steps:
-    - name: Download deployment package
-      uses: actions/download-artifact@v4
-      with:
-        name: deploy-package
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - '.github/workflows/**'
+  pull_request:
+    branches:
+      - main
+    paths-ignore:
+      - '.github/workflows/**'
 
-    - name: Configure AWS credentials with OIDC
-      uses: aws-actions/configure-aws-credentials@v4
-      with:
-        role-to-assume: arn:aws:iam::412541033791:role/GitHubActionsElasticBeanstalkRole
-        aws-region: eu-central-1
+permissions:
+  id-token: write
+  contents: read
 
-    - name: Deploy to Elastic Beanstalk
-      uses: aws-actions/aws-elasticbeanstalk-deploy@v1.0.0
-      with:
-        application-name: springboot-aws-docker-demo
-        environment-name: springboot-aws-docker-demo-env
-        version-label: ${{ needs.build-test-package.outputs.version_label }}
-        aws-region: eu-central-1
-        deployment-package-path: deploy.zip
-        create-application-if-not-exists: true
-        create-environment-if-not-exists: true
-        platform-arn: arn:aws:elasticbeanstalk:eu-central-1::platform/Docker running on 64bit Amazon Linux 2023
-        option-settings: |
-          [
-            {
-              "Namespace": "aws:autoscaling:launchconfiguration",
-              "OptionName": "IamInstanceProfile",
-              "Value": "aws-elasticbeanstalk-ec2-role"
-            },
-            {
-              "Namespace": "aws:elasticbeanstalk:environment",
-              "OptionName": "ServiceRole",
-              "Value": "aws-elasticbeanstalk-service-role"
-            }
-          ]
+jobs:
+  build-test-package:
+    runs-on: ubuntu-latest
+
+    outputs:
+      version_label: ${{ steps.version.outputs.label }}
+
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: corretto
+          java-version: '21'
+          cache: maven
+
+      - name: Build and test with Maven
+        run: mvn clean verify
+
+      - name: Build Docker image locally for validation
+        run: docker build -t springboot-aws-docker-demo:${{ github.sha }} .
+
+      - name: Generate deployment version label
+        id: version
+        shell: bash
+        run: echo "label=demo-${GITHUB_RUN_NUMBER}-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+
+      - name: Create deployment zip
+        run: zip -r deploy.zip Dockerfile .ebextensions target
+
+      - name: Upload deployment package
+        uses: actions/upload-artifact@v4
+        with:
+          name: deploy-package
+          path: deploy.zip
+
+  deploy:
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    needs: build-test-package
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download deployment package
+        uses: actions/download-artifact@v4
+        with:
+          name: deploy-package
+
+      - name: Configure AWS credentials with OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::412541033791:role/GitHubActionsElasticBeanstalkRole
+          aws-region: eu-central-1
+
+      - name: Deploy to Elastic Beanstalk
+        uses: aws-actions/aws-elasticbeanstalk-deploy@v1.0.0
+        with:
+          application-name: springboot-aws-docker-demo
+          environment-name: springboot-aws-docker-demo-env
+          version-label: ${{ needs.build-test-package.outputs.version_label }}
+          aws-region: eu-central-1
+          deployment-package-path: deploy.zip
+          create-application-if-not-exists: true
+          create-environment-if-not-exists: true
+          platform-arn: arn:aws:elasticbeanstalk:eu-central-1::platform/Docker running on 64bit Amazon Linux 2023
+          option-settings: |
+            [
+              {
+                "Namespace": "aws:autoscaling:launchconfiguration",
+                "OptionName": "IamInstanceProfile",
+                "Value": "aws-elasticbeanstalk-ec2-role"
+              },
+              {
+                "Namespace": "aws:elasticbeanstalk:environment",
+                "OptionName": "ServiceRole",
+                "Value": "aws-elasticbeanstalk-service-role"
+              }
+            ]
